@@ -5,11 +5,11 @@ import kotlin.system.exitProcess
 
 const val BYE_MESSAGE = "Bye!"
 const val INPUT_DELIMITER = ' '
+const val MINUS_SIGN = '-'
 
 fun main() {
     val numberList = mutableListOf<Int>()
     val scanner = Scanner(System.`in`)
-    var lastOperator: String
     /* Keep reading input until the user enters a command or a new line is entered. */
     while (scanner.hasNextLine()) {
         val input = scanner.nextLine()
@@ -26,8 +26,8 @@ fun main() {
         /* Split input string into tokens (separated by spaces)
          * and evaluate the expression. */
         val tokens = input.split(INPUT_DELIMITER)
-        var currentOp: Operation
-        var result: Int
+        var currentOperation = Operation.NONE
+        var total = 0
         /* Iterate through each token and when a token starts with a
         * dash for subtraction, count the number of dashes to determine
         * whether it should be interpreted as addition or subtraction.
@@ -35,24 +35,30 @@ fun main() {
         for (token in tokens) {
             if (isOperatorString(token)) {
                 if (token.first() == Operation.SUBTRACTION.operand) {
-                    currentOp = if (token.isEvenLength()) Operation.ADDITION else Operation.SUBTRACTION
+                    currentOperation = if (token.isEvenLength()) Operation.ADDITION else Operation.SUBTRACTION
                     continue
                 }
-                currentOp = Operation.valueOf(token.first())
+                currentOperation = Operation.valueOf(token.first())
                 continue
             }
-
+            /* Modify the total depending on the operand (if one has been reached). */
+            when (currentOperation) {
+                /* When an operand hasn't been read yet
+                * assume the token is a number and set the total to that
+                * number. */
+                Operation.NONE -> total = token.toInt()
+                Operation.ADDITION -> total += token.toInt()
+                Operation.SUBTRACTION -> total -= token.toInt()
+                Operation.MULTIPLICATION -> total *= token.toInt()
+                Operation.DIVISION -> total /= token.toInt()
+            }
         }
-        /* Add the number entered to a list of numbers to be
-        * added together. */
-        numberList.addAll(inputNumbers)
-        println(numberList.sum())
-
+        println(total)
     }
 }
 
 enum class Operation(val operand: Char) {
-    ADDITION('+'), SUBTRACTION('-'), MULTIPLICATION('*'), DIVISION('%');
+    NONE(' '), ADDITION('+'), SUBTRACTION('-'), MULTIPLICATION('*'), DIVISION('%');
 
     companion object {
         fun operators(): List<Char> {
@@ -75,12 +81,12 @@ private fun String.isEvenLength(): Boolean {
 
 /**
  * Checks if a string contains one or many of one type of operand.
- * @param s The string being checked
+ * @param token The string being checked
  * @return True if the string contains one or many of one type of operand.
  * False otherwise
  */
-fun isOperatorString(s: String): Boolean {
-    return Operation.operators().any { opChar -> opChar in s && s.all { c -> c in s}}
+fun isOperatorString(token: String): Boolean {
+    return Operation.operators().any { opChar -> opChar in token && token.all { c -> opChar == c } }
 }
 
 fun processCommand(input: String) {
