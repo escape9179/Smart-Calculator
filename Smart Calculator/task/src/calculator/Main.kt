@@ -67,6 +67,7 @@ fun main() {
 }
 
 private fun isValidExpression(input: String): Boolean {
+    /* If the input ends with an +, -, *, or / then the expression is invalid. */
     if (input.endsWith(PLUS_SIGN)
         || input.endsWith(MINUS_SIGN)
         || input.startsWith(MULTIPLY_SIGN)
@@ -74,6 +75,9 @@ private fun isValidExpression(input: String): Boolean {
     ) {
         return false
     }
+    /* The first alternation of the regex checks if there are two numbers separated by a space
+    * and the second alternation checks if there are any latin characters.
+    * Both alternations shouldn't be present in the string and therefore return false if present. */
     if ("(\\d+ \\d+|[A-Za-z]+)".toRegex().containsMatchIn(input)) return false
     return true
 }
