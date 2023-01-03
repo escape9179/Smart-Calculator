@@ -3,6 +3,7 @@ package calculator
 import java.util.Scanner
 import kotlin.system.exitProcess
 
+private val variableMap = mutableMapOf<String, Int>()
 private const val INVALID_INPUT_MESSAGE = "Invalid expression"
 private const val BYE_MESSAGE = "Bye!"
 private const val INPUT_DELIMITER = ' '
@@ -11,7 +12,8 @@ private const val MINUS_SIGN = "-"
 private const val MULTIPLY_SIGN = "*"
 private const val DIVIDE_SIGN = "/"
 private const val COMMAND_PREFIX = "/"
-
+private const val EQUALS_SIGN = "="
+private const val VARIABLE_ASSIGNMENT_REGEX = "[A-Za-z]+ *= *([0-9]+|[A-Za-z]+)$"
 
 fun main() {
     val scanner = Scanner(System.`in`)
@@ -24,10 +26,23 @@ fun main() {
             processCommand(input)
             continue
         }
-        /* Request input again if a blank line is entered. */
+        /* Do nothing and request input again if a blank line is entered. */
         if (input.isBlank()) {
             continue
         }
+
+        /* Check if the input is a variable assignment. If it is, then
+        * split the string at the '=' and put the variable and value in
+        * the variable map. */
+        if (VARIABLE_ASSIGNMENT_REGEX.toRegex().matches(input)) {
+            println("This is variable assignment")
+            val parts = input.split(EQUALS_SIGN)
+            val variable = parts[0].trim()
+            val value = parts[1].trim().toInt()
+            variableMap[variable] = value
+            continue
+        }
+
         if (!isValidExpression(input)) {
             println(INVALID_INPUT_MESSAGE)
             continue
