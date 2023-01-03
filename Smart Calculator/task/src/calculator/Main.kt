@@ -3,24 +3,33 @@ package calculator
 import java.util.Scanner
 import kotlin.system.exitProcess
 
-const val BYE_MESSAGE = "Bye!"
-const val INPUT_DELIMITER = ' '
-const val MINUS_SIGN = '-'
+private const val INVALID_INPUT_MESSAGE = "Invalid expression"
+private const val BYE_MESSAGE = "Bye!"
+private const val INPUT_DELIMITER = ' '
+private const val PLUS_SIGN = "+"
+private const val MINUS_SIGN = "-"
+private const val MULTIPLY_SIGN = "*"
+private const val DIVIDE_SIGN = "/"
+private const val COMMAND_PREFIX = "/"
+
 
 fun main() {
-    val numberList = mutableListOf<Int>()
     val scanner = Scanner(System.`in`)
     /* Keep reading input until the user enters a command or a new line is entered. */
     while (scanner.hasNextLine()) {
         val input = scanner.nextLine()
         /* Process whichever command the user entered
         * then go back to input processing. */
-        if (input in Command.labels()) {
+        if (input.startsWith(COMMAND_PREFIX)) {
             processCommand(input)
             continue
         }
         /* Request input again if a blank line is entered. */
         if (input.isBlank()) {
+            continue
+        }
+        if (!isValidExpression(input)) {
+            println(INVALID_INPUT_MESSAGE)
             continue
         }
         /* Split input string into tokens (separated by spaces)
@@ -55,6 +64,18 @@ fun main() {
         }
         println(total)
     }
+}
+
+private fun isValidExpression(input: String): Boolean {
+    if (input.endsWith(PLUS_SIGN)
+        || input.endsWith(MINUS_SIGN)
+        || input.startsWith(MULTIPLY_SIGN)
+        || input.startsWith(DIVIDE_SIGN)
+    ) {
+        return false
+    }
+    if ("(\\d+ \\d+|[A-Za-z]+)".toRegex().containsMatchIn(input)) return false
+    return true
 }
 
 enum class Operation(val operand: Char) {
@@ -98,6 +119,9 @@ fun processCommand(input: String) {
 
         Command.HELP.label -> {
             println("This program calculates the sum of numbers.")
+        }
+        else -> {
+            println("Unknown command")
         }
     }
 }
