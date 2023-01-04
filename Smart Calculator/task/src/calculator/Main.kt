@@ -17,7 +17,7 @@ private const val MULTIPLY_SIGN = "*"
 private const val DIVIDE_SIGN = "/"
 private const val COMMAND_PREFIX = "/"
 private const val EQUALS_SIGN = "="
-private const val VARIABLE_ASSIGNMENT_REGEX = "$VARIABLE_REGEX *= *([0-9]+|[A-Za-z]+)$"
+private const val VARIABLE_ASSIGNMENT_REGEX = "$VARIABLE_REGEX *= *([0-9]+|[A-Za-z]+) *$"
 
 fun main() {
     val scanner = Scanner(System.`in`)
