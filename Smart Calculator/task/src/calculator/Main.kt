@@ -112,7 +112,10 @@ fun main() {
         * dash for subtraction, count the number of dashes to determine
         * whether it should be interpreted as addition or subtraction.
         * Don't do anything special for any other types of operators. */
+        val postfixResult = StringBuilder()
+        val stack = Stack<String>()
         for (token in tokens) {
+/*
             if (isOperatorString(token)) {
                 if (token.first() == Operation.SUBTRACTION.operand) {
                     currentOperation = if (token.isEvenLength()) Operation.ADDITION else Operation.SUBTRACTION
@@ -121,15 +124,16 @@ fun main() {
                 currentOperation = Operation.getOperand(token.first())
                 continue
             }
+*/
 
             // TODO: Perform infix to postfix and result calculations
-            val postfixResult = StringBuilder()
-            val stack = Stack<String>()
             /* Add operands (numbers and variables) to the result as they arrive. */
             if (token.isNumber()) {
                 postfixResult.append(token)
                 postfixResult.append(' ')
-            } else if (token.isOperator()) {
+                continue
+            }
+            if (token.isOperator()) {
                 /* If the stack is empty or contains a left parenthesis on top,
                 * push the incoming operator on the stack. */
                 if (stack.empty() || stack.peek() == LEFT_PARENTHESIS) {
@@ -147,7 +151,7 @@ fun main() {
                 if (Operation.getOperand(token).priority <= Operation.getOperand(stack.peek()).priority) {
                     do {
                         postfixResult.append(stack.pop())
-                    } while (stack.peek() != LEFT_PARENTHESIS || Operation.getOperand(stack.peek()) > Operation.getOperand(token))
+                    } while (!stack.empty() && (stack.peek() != LEFT_PARENTHESIS || Operation.getOperand(stack.peek()) >= Operation.getOperand(token)))
                     stack.push(token)
                     continue
                 }
@@ -169,27 +173,30 @@ fun main() {
                 continue
             }
 
-            while (!stack.empty()) {
-                postfixResult.append(stack.pop())
-            }
-
-            println("postfixResult = ${postfixResult}")
-            continue
-
             /* Modify the total depending on the operand (if one has been reached). */
+/*
             when (currentOperation) {
-                /* When an operand hasn't been read yet
+                */
+/* When an operand hasn't been read yet
                 * assume the token is a number and set the total to that
-                * number. */
+                * number. *//*
+
                 Operation.NONE -> total = token.toInt()
                 Operation.ADDITION -> total += token.toInt()
                 Operation.SUBTRACTION -> total -= token.toInt()
                 Operation.MULTIPLICATION -> total *= token.toInt()
                 Operation.DIVISION -> total /= token.toInt()
             }
+*/
         }
-        println(total)
+        /* At the end of the expression, pop the stack and add all operators to the result. */
+        while (!stack.empty()) {
+            postfixResult.append(stack.pop())
+        }
+//        println(total)
+        println("postfixResult = ${postfixResult.trim()}")
     }
+
 }
 
 private fun String.isOperator(): Boolean {
