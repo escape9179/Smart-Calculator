@@ -1,14 +1,17 @@
 package calculator
 
+import java.lang.NullPointerException
 import java.util.Scanner
+import java.util.Stack
 import kotlin.system.exitProcess
 
+private const val RIGHT_PARENTHESIS = ")"
+private const val LEFT_PARENTHESIS = "("
 private const val VARIABLE_REGEX = "[A-Za-z]+"
 private val variableMap = mutableMapOf<String, Int>()
 private const val INVALID_ASSIGNMENT_MESSAGE = "Invalid assignment"
 private const val UNKNOWN_VARIABLE_MESSAGE = "Unknown variable"
 private const val INVALID_IDENTIFIER_MESSAGE = "Invalid identifier"
-private const val INVALID_EXPRESSION_MESSAGE = "Invalid expression"
 private const val BYE_MESSAGE = "Bye!"
 private const val INPUT_DELIMITER = ' '
 private const val PLUS_SIGN = "+"
@@ -82,7 +85,6 @@ fun main() {
             continue
         }
         if (!isValidExpression(input)) {
-//            println(INVALID_EXPRESSION_MESSAGE)
             println(INVALID_IDENTIFIER_MESSAGE)
             continue
         }
@@ -116,9 +118,64 @@ fun main() {
                     currentOperation = if (token.isEvenLength()) Operation.ADDITION else Operation.SUBTRACTION
                     continue
                 }
-                currentOperation = Operation.valueOf(token.first())
+                currentOperation = Operation.getOperand(token.first())
                 continue
             }
+
+            // TODO: Perform infix to postfix and result calculations
+            val postfixResult = StringBuilder()
+            val stack = Stack<String>()
+            /* Add operands (numbers and variables) to the result as they arrive. */
+            if (token.isNumber()) {
+                postfixResult.append(token)
+                postfixResult.append(' ')
+            } else if (token.isOperator()) {
+                /* If the stack is empty or contains a left parenthesis on top,
+                * push the incoming operator on the stack. */
+                if (stack.empty() || stack.peek() == LEFT_PARENTHESIS) {
+                    stack.push(token)
+                    continue
+                }
+                /* If the incoming operand has higher precedence than the top of the stack, push it on the stack. */
+                if (Operation.getOperand(token).priority > Operation.getOperand(stack.peek()).priority) {
+                    stack.push(token)
+                    continue
+                    /* If the precedence of the incoming operator is lower than or equal to that of the top of the stack,
+                    * pop the stack and add operators to the result until you see an operator that has smaller
+                    * precedence or a left parenthesis on the top of the stack; then add the incoming operator to the stack. */
+                }
+                if (Operation.getOperand(token).priority <= Operation.getOperand(stack.peek()).priority) {
+                    do {
+                        postfixResult.append(stack.pop())
+                    } while (stack.peek() != LEFT_PARENTHESIS || Operation.getOperand(stack.peek()) > Operation.getOperand(token))
+                    stack.push(token)
+                    continue
+                }
+                continue
+            }
+            /* If the incoming element is a left parenthesis, push it on the stack. */
+            if (token == LEFT_PARENTHESIS) {
+                stack.push(token)
+                continue
+            }
+            /* If the incoming element is a right parenthesis, pop the stack and add operators until you see a left
+            * parenthesis. Discard the pair of parenthesis. */
+            if (token == RIGHT_PARENTHESIS) {
+                do {
+                    postfixResult.append(stack.pop())
+                } while (stack.peek() != LEFT_PARENTHESIS)
+                /* Discard the left parenthesis */
+                stack.pop()
+                continue
+            }
+
+            while (!stack.empty()) {
+                postfixResult.append(stack.pop())
+            }
+
+            println("postfixResult = ${postfixResult}")
+            continue
+
             /* Modify the total depending on the operand (if one has been reached). */
             when (currentOperation) {
                 /* When an operand hasn't been read yet
@@ -133,6 +190,14 @@ fun main() {
         }
         println(total)
     }
+}
+
+private fun String.isOperator(): Boolean {
+    return Regex("[+\\-*/]+").matches(this)
+}
+
+private fun String.isNumber(): Boolean {
+    return "\\d+".toRegex().matches(this)
 }
 
 /**
@@ -153,16 +218,23 @@ private fun isValidExpression(input: String): Boolean {
     return true
 }
 
-enum class Operation(val operand: Char) {
-    NONE(' '), ADDITION('+'), SUBTRACTION('-'), MULTIPLICATION('*'), DIVISION('%');
+enum class Operation(val operand: Char, val priority: Int) {
+    NONE(' ', 0), ADDITION('+', 1), SUBTRACTION('-', 1), MULTIPLICATION('*', 2), DIVISION('%', 2);
 
     companion object {
         fun operators(): List<Char> {
             return values().map { it.operand }
         }
 
-        fun valueOf(c: Char): Operation {
+        fun getOperand(c: Char): Operation {
             return values().first { it.operand == c }
+        }
+
+        fun getOperand(s: String): Operation {
+            if (s.length > 1) {
+                throw NullPointerException()
+            }
+            return getOperand(s[0])
         }
     }
 }
