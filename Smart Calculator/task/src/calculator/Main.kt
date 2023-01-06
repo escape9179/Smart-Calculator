@@ -1,6 +1,8 @@
 package calculator
 
 import java.lang.NullPointerException
+import java.util.LinkedList
+import java.util.Queue
 import java.util.Scanner
 import java.util.Stack
 import kotlin.system.exitProcess
@@ -103,100 +105,85 @@ fun main() {
             println(UNKNOWN_VARIABLE_MESSAGE)
             continue
         }
-        /* Split input string into tokens (separated by spaces)
-         * and evaluate the expression. */
-        val tokens = input.split(INPUT_DELIMITER)
-        var currentOperation = Operation.NONE
-        var total = 0
-        /* Iterate through each token and when a token starts with a
-        * dash for subtraction, count the number of dashes to determine
-        * whether it should be interpreted as addition or subtraction.
-        * Don't do anything special for any other types of operators. */
-        val postfixResult = StringBuilder()
-        val stack = Stack<String>()
-        for (token in tokens) {
-/*
-            if (isOperatorString(token)) {
-                if (token.first() == Operation.SUBTRACTION.operand) {
-                    currentOperation = if (token.isEvenLength()) Operation.ADDITION else Operation.SUBTRACTION
-                    continue
-                }
-                currentOperation = Operation.getOperand(token.first())
-                continue
-            }
-*/
 
-            // TODO: Perform infix to postfix and result calculations
-            /* Add operands (numbers and variables) to the result as they arrive. */
-            if (token.isNumber()) {
-                postfixResult.append(token)
-                postfixResult.append(' ')
-                continue
-            }
-            if (token.isOperator()) {
-                /* If the stack is empty or contains a left parenthesis on top,
-                * push the incoming operator on the stack. */
-                if (stack.empty() || stack.peek() == LEFT_PARENTHESIS) {
-                    stack.push(token)
-                    continue
-                }
-                /* If the incoming operand has higher precedence than the top of the stack, push it on the stack. */
-                if (Operation.getOperand(token).priority > Operation.getOperand(stack.peek()).priority) {
-                    stack.push(token)
-                    continue
-                    /* If the precedence of the incoming operator is lower than or equal to that of the top of the stack,
-                    * pop the stack and add operators to the result until you see an operator that has smaller
-                    * precedence or a left parenthesis on the top of the stack; then add the incoming operator to the stack. */
-                }
-                if (Operation.getOperand(token).priority <= Operation.getOperand(stack.peek()).priority) {
-                    do {
-                        postfixResult.append(stack.pop())
-                    } while (!stack.empty() && (stack.peek() != LEFT_PARENTHESIS || Operation.getOperand(stack.peek()) >= Operation.getOperand(token)))
-                    stack.push(token)
-                    continue
-                }
-                continue
-            }
-            /* If the incoming element is a left parenthesis, push it on the stack. */
-            if (token == LEFT_PARENTHESIS) {
-                stack.push(token)
-                continue
-            }
-            /* If the incoming element is a right parenthesis, pop the stack and add operators until you see a left
-            * parenthesis. Discard the pair of parenthesis. */
-            if (token == RIGHT_PARENTHESIS) {
-                do {
-                    postfixResult.append(stack.pop())
-                } while (stack.peek() != LEFT_PARENTHESIS)
-                /* Discard the left parenthesis */
-                stack.pop()
-                continue
-            }
-
-            /* Modify the total depending on the operand (if one has been reached). */
-/*
-            when (currentOperation) {
-                */
-/* When an operand hasn't been read yet
-                * assume the token is a number and set the total to that
-                * number. *//*
-
-                Operation.NONE -> total = token.toInt()
-                Operation.ADDITION -> total += token.toInt()
-                Operation.SUBTRACTION -> total -= token.toInt()
-                Operation.MULTIPLICATION -> total *= token.toInt()
-                Operation.DIVISION -> total /= token.toInt()
-            }
-*/
-        }
-        /* At the end of the expression, pop the stack and add all operators to the result. */
-        while (!stack.empty()) {
-            postfixResult.append(stack.pop())
-        }
-//        println(total)
-        println("postfixResult = ${postfixResult.trim()}")
+        val postfix = convertToPostfix(input)
+        println("postfixResult = $postfix")
     }
 
+}
+
+private fun convertToPostfix(input: String): String {
+    /* Find all numbers within the input and replace them with underscores. */
+    val numbers = input.split(Regex("[ +\\-*/()]+")).filter { it.isNotBlank() }
+    val numberQueue = LinkedList(numbers.map { it.toInt() })
+    val inputWithoutNumbers = input.replace(Regex("\\d+"), "_").toCharArray().map { it.toString() }
+    val resultCharList = mutableListOf<Any>()
+    val stack = Stack<String>()
+    for (char in inputWithoutNumbers) {
+/*
+        if (char.isBlank()) {
+            postfixResult.append(' ')
+            continue
+        }
+*/
+        /* The underscores represent numbers. If an underscore is encountered, append
+        * that number to the postfix result and remove it from the number queue. */
+        if (char.isUnderscore()) {
+            resultCharList.add(numberQueue.remove())
+            continue
+        }
+        if (char.isOperator()) {
+            /* If the stack is empty or contains a left parenthesis on top,
+                * push the incoming operator on the stack. */
+            if (stack.empty() || stack.peek() == LEFT_PARENTHESIS) {
+                stack.push(char)
+                continue
+            }
+            /* If the incoming operand has higher precedence than the top of the stack, push it on the stack. */
+            if (Operation.getOperand(char).priority > Operation.getOperand(stack.peek()).priority) {
+                stack.push(char)
+                continue
+                /* If the precedence of the incoming operator is lower than or equal to that of the top of the stack,
+                    * pop the stack and add operators to the result until you see an operator that has smaller
+                    * precedence or a left parenthesis on the top of the stack; then add the incoming operator to the stack. */
+            }
+            if (Operation.getOperand(char).priority <= Operation.getOperand(stack.peek()).priority) {
+                do {
+                    resultCharList.add(stack.pop())
+                } while (!stack.empty() && (stack.peek() != LEFT_PARENTHESIS || Operation.getOperand(stack.peek()) >= Operation.getOperand(
+                        char
+                    ))
+                )
+                stack.push(char)
+                continue
+            }
+            continue
+        }
+        /* If the incoming element is a left parenthesis, push it on the stack. */
+        if (char == LEFT_PARENTHESIS) {
+            stack.push(char)
+            continue
+        }
+        /* If the incoming element is a right parenthesis, pop the stack and add operators until you see a left
+            * parenthesis. Discard the pair of parenthesis. */
+        if (char == RIGHT_PARENTHESIS) {
+            do {
+                resultCharList.add(stack.pop())
+            } while (stack.peek() != LEFT_PARENTHESIS)
+            /* Discard the left parenthesis */
+            stack.pop()
+            continue
+        }
+    }
+    /* At the end of the expression, pop the stack and add all operators to the result. */
+    while (!stack.empty()) {
+        resultCharList.add(stack.pop())
+    }
+    return resultCharList.joinToString(" ")
+}
+
+private fun String.isUnderscore(): Boolean {
+    return Regex("_").matches(this)
 }
 
 private fun String.isOperator(): Boolean {
