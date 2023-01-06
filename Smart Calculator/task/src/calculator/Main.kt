@@ -2,7 +2,6 @@ package calculator
 
 import java.lang.NullPointerException
 import java.util.LinkedList
-import java.util.Queue
 import java.util.Scanner
 import java.util.Stack
 import kotlin.system.exitProcess
@@ -113,23 +112,39 @@ fun main() {
 }
 
 private fun convertToPostfix(input: String): String {
-    /* Find all numbers within the input and replace them with underscores. */
+    /**
+     * A list containing all the numbers in the input.
+     */
     val numbers = input.split(Regex("[ +\\-*/()]+")).filter { it.isNotBlank() }
+
+    /**
+     * A queue of all numbers in the input expression.
+     */
     val numberQueue = LinkedList(numbers.map { it.toInt() })
+
+    /**
+     * The input expression with all numbers replaced by underscores. This
+     * makes it easier when converting infix to postfix.
+     */
     val inputWithoutNumbers = input.replace(Regex("\\d+"), "_").toCharArray().map { it.toString() }
-    val resultCharList = mutableListOf<Any>()
+
+    /**
+     * A list containing operands and operators. After the infix to postfix conversion
+     * the list will be joined into a string giving the postfix expression as a result.
+     */
+    val operatorOperandList = mutableListOf<Any>()
+
+    /**
+     * The stack used for storing operands and operators during the conversion process.
+     */
     val stack = Stack<String>()
+
+
     for (char in inputWithoutNumbers) {
-/*
-        if (char.isBlank()) {
-            postfixResult.append(' ')
-            continue
-        }
-*/
         /* The underscores represent numbers. If an underscore is encountered, append
         * that number to the postfix result and remove it from the number queue. */
         if (char.isUnderscore()) {
-            resultCharList.add(numberQueue.remove())
+            operatorOperandList.add(numberQueue.remove())
             continue
         }
         if (char.isOperator()) {
@@ -149,7 +164,7 @@ private fun convertToPostfix(input: String): String {
             }
             if (Operation.getOperand(char).priority <= Operation.getOperand(stack.peek()).priority) {
                 do {
-                    resultCharList.add(stack.pop())
+                    operatorOperandList.add(stack.pop())
                 } while (!stack.empty() && (stack.peek() != LEFT_PARENTHESIS || Operation.getOperand(stack.peek()) >= Operation.getOperand(
                         char
                     ))
@@ -168,7 +183,7 @@ private fun convertToPostfix(input: String): String {
             * parenthesis. Discard the pair of parenthesis. */
         if (char == RIGHT_PARENTHESIS) {
             do {
-                resultCharList.add(stack.pop())
+                operatorOperandList.add(stack.pop())
             } while (stack.peek() != LEFT_PARENTHESIS)
             /* Discard the left parenthesis */
             stack.pop()
@@ -177,9 +192,9 @@ private fun convertToPostfix(input: String): String {
     }
     /* At the end of the expression, pop the stack and add all operators to the result. */
     while (!stack.empty()) {
-        resultCharList.add(stack.pop())
+        operatorOperandList.add(stack.pop())
     }
-    return resultCharList.joinToString(" ")
+    return operatorOperandList.joinToString(" ")
 }
 
 private fun String.isUnderscore(): Boolean {
