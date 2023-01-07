@@ -1,6 +1,7 @@
 package calculator
 
 import java.lang.NullPointerException
+import java.math.BigInteger
 import java.util.LinkedList
 import java.util.Scanner
 import java.util.Stack
@@ -11,7 +12,7 @@ private const val NUMBER_PLACEHOLDER = "_"
 private const val ERROR = "error"
 private const val INVALID_EXPRESSION_ERROR = "Invalid expression"
 private const val VARIABLE_REGEX = "[A-Za-z]+"
-private val variableMap = mutableMapOf<String, Int>()
+private val variableMap = mutableMapOf<String, BigInteger>()
 private const val INVALID_ASSIGNMENT_ERROR = "Invalid assignment"
 private const val UNKNOWN_VARIABLE_ERROR = "Unknown variable"
 private const val INVALID_IDENTIFIER_ERROR = "Invalid identifier"
@@ -81,7 +82,7 @@ fun main() {
             /* Assume that the expression on the right side of the equation
             * is an integer since the variable regex couldn't match it and
             * assign the variable that integer. */
-            variableMap[lhs] = rhs.toInt()
+            variableMap[lhs] = rhs.toBigInteger()
             continue
         } else if (EQUALS_SIGN in input) {
             println(INVALID_ASSIGNMENT_ERROR)
@@ -139,7 +140,7 @@ fun main() {
 
 }
 
-fun convertPostfixToAnswer(postfix: String): Int {
+fun convertPostfixToAnswer(postfix: String): BigInteger {
     val stack = LinkedList<String>()
     for (element in postfix.split(" ")) {
         /* If the incoming element is a number, push it into the stack (the whole number, not a single digit!). */
@@ -151,8 +152,8 @@ fun convertPostfixToAnswer(postfix: String): Int {
         /* If the incoming element is an operator, then pop twice to get two numbers and perform the operation;
         * push the result on the stack. */
         if (element.isOperator()) {
-            val num1=stack.pop().toInt()
-            val num2=stack.pop().toInt()
+            val num1=stack.pop().toBigInteger()
+            val num2=stack.pop().toBigInteger()
             when (Operator.getOperand(element)) {
                 Operator.PLUS -> stack.push((num1 + num2).toString())
                 Operator.MINUS -> stack.push((num2 - num1).toString())
@@ -162,7 +163,7 @@ fun convertPostfixToAnswer(postfix: String): Int {
             }
         }
     }
-    return stack.pop().toInt()
+    return stack.pop().toBigInteger()
 }
 
 private fun convertToPostfix(input: String): String {
@@ -174,7 +175,7 @@ private fun convertToPostfix(input: String): String {
     /**
      * A queue of all numbers in the input expression.
      */
-    val numberQueue = LinkedList(numbers.map { it.toInt() })
+    val numberQueue = LinkedList(numbers.map { it.toBigInteger() })
 
 
     /**
