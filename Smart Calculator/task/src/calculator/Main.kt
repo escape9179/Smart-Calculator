@@ -29,7 +29,7 @@ fun main() {
     val scanner = Scanner(System.`in`)
     /* Keep reading input until the user enters a command or a new line is entered. */
     while (scanner.hasNextLine()) {
-        var input = scanner.nextLine()
+        var input = scanner.nextLine().trim()
         /* Process whichever command the user entered
         * then go back to input processing. */
         if (input.startsWith(COMMAND_PREFIX)) {
@@ -112,12 +112,18 @@ fun main() {
             continue
         }
 
+        /* Checks if there are un-even parenthesis. */
         val rightParenthesisCount = input.count { it == '(' }
         val leftParenthesisCount = input.count { it == ')' }
         if (rightParenthesisCount != leftParenthesisCount) {
             println(INVALID_EXPRESSION_ERROR)
             continue
         }
+
+        /* Replace plus signs preceding minus signs with minus signs,
+        * and minus signs preceding plus signs with plus signs. */
+        input=input.replace(Regex("\\++\\s*-+\\s*"), "-")
+            .replace(Regex("-+\\s*\\++\\s*"), "+")
 
         val postfix = convertToPostfix(input)
         if(postfix == INVALID_ASSIGNMENT_ERROR|| postfix==INVALID_EXPRESSION_ERROR|| postfix==INVALID_IDENTIFIER_ERROR){
@@ -182,7 +188,7 @@ private fun convertToPostfix(input: String): String {
 
     val operators = input.split(Regex("[\\d ()]+")).filter { it.isNotBlank() }.map {
         if(it.length%2==0&&it[0]== MINUS_SIGN[0]) PLUS_SIGN
-        else if(it.length>1&&it[0]==Operator.ASTERISK.symbol[0]||it[0]==Operator.FORWARD_SLASH.symbol[0]) return INVALID_EXPRESSION_ERROR
+        else if(it.length>1&&(it[0]==Operator.ASTERISK.symbol[0]||it[0]==Operator.FORWARD_SLASH.symbol[0])) return INVALID_EXPRESSION_ERROR
         else it[0].toString()
     }
     val operatorQueue = LinkedList(operators)
