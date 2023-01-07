@@ -6,11 +6,15 @@ import java.util.Scanner
 import java.util.Stack
 import kotlin.system.exitProcess
 
+private const val OPERATOR_PLACEHOLDER = "!"
+private const val NUMBER_PLACEHOLDER = "_"
+private const val ERROR = "error"
+private const val INVALID_EXPRESSION_ERROR = "Invalid expression"
 private const val VARIABLE_REGEX = "[A-Za-z]+"
 private val variableMap = mutableMapOf<String, Int>()
-private const val INVALID_ASSIGNMENT_MESSAGE = "Invalid assignment"
-private const val UNKNOWN_VARIABLE_MESSAGE = "Unknown variable"
-private const val INVALID_IDENTIFIER_MESSAGE = "Invalid identifier"
+private const val INVALID_ASSIGNMENT_ERROR = "Invalid assignment"
+private const val UNKNOWN_VARIABLE_ERROR = "Unknown variable"
+private const val INVALID_IDENTIFIER_ERROR = "Invalid identifier"
 private const val BYE_MESSAGE = "Bye!"
 private const val INPUT_DELIMITER = ' '
 private const val PLUS_SIGN = "+"
@@ -19,7 +23,7 @@ private const val MULTIPLY_SIGN = "*"
 private const val DIVIDE_SIGN = "/"
 private const val COMMAND_PREFIX = "/"
 private const val EQUALS_SIGN = "="
-private const val VARIABLE_ASSIGNMENT_REGEX = "$VARIABLE_REGEX *= *([0-9]+|[A-Za-z]+) *$"
+private const val VARIABLE_ASSIGNMENT_REGEX = "$VARIABLE_REGEX *= *-?([0-9]+|[A-Za-z]+) *$"
 
 fun main() {
     val scanner = Scanner(System.`in`)
@@ -38,7 +42,7 @@ fun main() {
         }
 
         if (EQUALS_SIGN.toRegex().findAll(input).count() > 1) {
-            println(INVALID_ASSIGNMENT_MESSAGE)
+            println(INVALID_ASSIGNMENT_ERROR)
             continue
         }
 
@@ -52,7 +56,7 @@ fun main() {
         }
 
         if (lhs.contains("([A-Za-z]+\\d+|\\d+[A-Za-z]+)".toRegex())) {
-            println(INVALID_IDENTIFIER_MESSAGE)
+            println(INVALID_IDENTIFIER_ERROR)
             continue
         }
         /* Check if the input is a variable assignment. If it is, then
@@ -70,7 +74,7 @@ fun main() {
                 } else {
                     /* If the variable on the right side of the expression
                     * isn't in the variable map, then print an error message. */
-                    println(UNKNOWN_VARIABLE_MESSAGE)
+                    println(UNKNOWN_VARIABLE_ERROR)
                     continue
                 }
             }
@@ -80,11 +84,11 @@ fun main() {
             variableMap[lhs] = rhs.toInt()
             continue
         } else if (EQUALS_SIGN in input) {
-            println(INVALID_ASSIGNMENT_MESSAGE)
+            println(INVALID_ASSIGNMENT_ERROR)
             continue
         }
         if (!isValidExpression(input)) {
-            println(INVALID_IDENTIFIER_MESSAGE)
+            println(INVALID_IDENTIFIER_ERROR)
             continue
         }
         /* Replace all variables in the expression with their numerical values,
@@ -99,34 +103,89 @@ fun main() {
             input = input.replace(it.value, variableMap[it.value].toString())
         }
         if (hasUnknownVariable) {
-            println(UNKNOWN_VARIABLE_MESSAGE)
+            println(UNKNOWN_VARIABLE_ERROR)
+            continue
+        }
+
+        if (input.matches(Regex("-*\\+*\\d+"))) {
+            println(input.replace("+", "").replace(" ", ""))
+            continue
+        }
+
+        val rightParenthesisCount = input.count { it == '(' }
+        val leftParenthesisCount = input.count { it == ')' }
+        if (rightParenthesisCount != leftParenthesisCount) {
+            println(INVALID_EXPRESSION_ERROR)
             continue
         }
 
         val postfix = convertToPostfix(input)
-        println("postfixResult = $postfix")
+        if(postfix == INVALID_ASSIGNMENT_ERROR|| postfix==INVALID_EXPRESSION_ERROR|| postfix==INVALID_IDENTIFIER_ERROR){
+            println(postfix)
+            continue
+        }
+
+
+        /* Postfix to result. */
+        val answer = convertPostfixToAnswer(postfix)
+        println(answer)
     }
 
+}
+
+fun convertPostfixToAnswer(postfix: String): Int {
+    val stack = LinkedList<String>()
+    for (element in postfix.split(" ")) {
+        /* If the incoming element is a number, push it into the stack (the whole number, not a single digit!). */
+        if (element.isNumber()) {
+            stack.push(element)
+            continue
+        }
+        // TODO: If the incoming element is the name of a variable, push its value into the stack????
+        /* If the incoming element is an operator, then pop twice to get two numbers and perform the operation;
+        * push the result on the stack. */
+        if (element.isOperator()) {
+            val num1=stack.pop().toInt()
+            val num2=stack.pop().toInt()
+            when (Operator.getOperand(element)) {
+                Operator.PLUS -> stack.push((num1 + num2).toString())
+                Operator.MINUS -> stack.push((num2 - num1).toString())
+                Operator.ASTERISK -> stack.push((num1 * num2).toString())
+                Operator.FORWARD_SLASH -> stack.push((num2/num1).toString())
+                Operator.HAT->stack.push(Math.pow(num2.toDouble(), num1.toDouble()).toInt().toString())
+            }
+        }
+    }
+    return stack.pop().toInt()
 }
 
 private fun convertToPostfix(input: String): String {
     /**
      * A list containing all the numbers in the input.
      */
-    val numbers = input.split(Regex("[ +\\-*/()]+")).filter { it.isNotBlank() }
+    val numbers = input.split(Regex("[ +\\-*/()^]+")).filter { it.isNotBlank() }
 
     /**
      * A queue of all numbers in the input expression.
      */
     val numberQueue = LinkedList(numbers.map { it.toInt() })
 
+
     /**
      * The input expression with all numbers replaced by underscores. This
      * makes it easier when converting infix to postfix.
      */
-    val inputWithoutNumbersOrSpaces = input.replace(Regex("\\d+"), "_")
+    val inputWithoutNumbersOrSpacesOrOperators = input.replace(Regex("\\d+"), NUMBER_PLACEHOLDER)
+        .replace(Regex("[+\\-*/^]+"), OPERATOR_PLACEHOLDER)
         .filter { it != ' ' }
         .toCharArray().map { it.toString() }
+
+    val operators = input.split(Regex("[\\d ()]+")).filter { it.isNotBlank() }.map {
+        if(it.length%2==0&&it[0]== MINUS_SIGN[0]) PLUS_SIGN
+        else if(it.length>1&&it[0]==Operator.ASTERISK.symbol[0]||it[0]==Operator.FORWARD_SLASH.symbol[0]) return INVALID_EXPRESSION_ERROR
+        else it[0].toString()
+    }
+    val operatorQueue = LinkedList(operators)
 
     /**
      * A list containing operands and operators. After the infix to postfix conversion
@@ -139,62 +198,70 @@ private fun convertToPostfix(input: String): String {
      */
     val stack = Stack<String>()
 
-
-    for (char in inputWithoutNumbersOrSpaces) {
+    for (char in inputWithoutNumbersOrSpacesOrOperators) {
         /* The underscores represent numbers. If an underscore is encountered, append
         * that number to the postfix result and remove it from the number queue. */
         if (char.isUnderscore()) {
             operatorOperandList.add(numberQueue.remove())
             continue
         }
-        if (char.isOperator()) {
+        if (char.isExclamationMark()) {
+            val operator = operatorQueue.remove()
             /* If the stack is empty or contains a left parenthesis on top,
             * push the incoming operator on the stack. */
-            if (stack.empty() || stack.peek() == Operand.LEFT_PARENTHESIS.symbol) {
-                stack.push(char)
+            if (stack.empty() || stack.peek() == Operator.LEFT_PARENTHESIS.symbol) {
+                stack.push(operator)
                 continue
             }
             /* If the incoming operator has higher precedence than the top of the stack, push it on the stack. */
-            if (Operand.getOperand(char).precedence > Operand.getOperand(stack.peek()).precedence) {
-                stack.push(char)
+            if (Operator.getOperand(operator).precedence > Operator.getOperand(stack.peek()).precedence) {
+                stack.push(operator)
                 continue
             }
             /* If the precedence of the incoming operator is lower than or equal to that of the top of the stack,
             * pop the stack and add operators to the result until you see an operator that has smaller
             * precedence or a left parenthesis on the top of the stack; then add the incoming operator to the stack. */
-            if (Operand.getOperand(char).precedence <= Operand.getOperand(stack.peek()).precedence) {
+            if (Operator.getOperand(operator).precedence <= Operator.getOperand(stack.peek()).precedence) {
                 do {
                     operatorOperandList.add(stack.pop())
-                } while (stack.isNotEmpty() && (Operand.getOperand(stack.peek()).precedence > Operand.getOperand(char).precedence || stack.peek() != Operand.LEFT_PARENTHESIS.symbol)
+                } while (stack.isNotEmpty() && (Operator.getOperand(stack.peek()).precedence > Operator.getOperand(operator).precedence || stack.peek() != Operator.LEFT_PARENTHESIS.symbol)
                 )
-                stack.push(char)
+                stack.push(operator)
                 continue
             }
         }
         if(char.isParenthesis()) {
             /* If the incoming element is a left parenthesis, push it on the stack. */
-            if (char == Operand.LEFT_PARENTHESIS.symbol) {
+            if (char == Operator.LEFT_PARENTHESIS.symbol) {
                 stack.push(char)
                 continue
             }
             /* If the incoming element is a right parenthesis, pop the stack and add operators until you see a left
             * parenthesis. Discard the pair of parenthesis. */
-            if (char == Operand.RIGHT_PARENTHESIS.symbol) {
+            if (char == Operator.RIGHT_PARENTHESIS.symbol) {
                 do {
+                    if(stack.isEmpty())return INVALID_EXPRESSION_ERROR
                     operatorOperandList.add(stack.pop())
-                } while (stack.isNotEmpty() && stack.peek() != Operand.LEFT_PARENTHESIS.symbol)
+                } while (stack.isNotEmpty() && stack.peek() != Operator.LEFT_PARENTHESIS.symbol)
                 /* Discard the left parenthesis */
                 if (stack.isNotEmpty()) stack.pop()
                 continue
             }
         }
     }
+    /* If any parenthesis remain on the stack then it's a syntax error. */
+    if (Operator.LEFT_PARENTHESIS.symbol in stack || Operator.RIGHT_PARENTHESIS.symbol in stack) {
+        return INVALID_EXPRESSION_ERROR
+    }
     /* At the end of the expression, pop the stack and add all operators to the result. */
     while (stack.isNotEmpty()) {
         operatorOperandList.add(stack.pop())
     }
-    println("inputWithoutNumbersOrSpaces = ${inputWithoutNumbersOrSpaces}")
     return operatorOperandList.joinToString(" ")
+}
+
+private fun String.isExclamationMark(): Boolean {
+    return Regex("!").matches(this)
 }
 
 private fun String.isParenthesis(): Boolean {
@@ -206,7 +273,7 @@ private fun String.isUnderscore(): Boolean {
 }
 
 private fun String.isOperator(): Boolean {
-    return Regex("[+\\-*/]+").matches(this)
+    return Regex("[+\\-*/^]+").matches(this)
 }
 
 private fun String.isNumber(): Boolean {
@@ -222,6 +289,8 @@ private fun isValidExpression(input: String): Boolean {
         || input.endsWith(MINUS_SIGN)
         || input.startsWith(MULTIPLY_SIGN)
         || input.startsWith(DIVIDE_SIGN)
+        || input.startsWith(Operator.HAT.symbol)
+        || input.endsWith(Operator.HAT.symbol)
     ) {
         return false
     }
@@ -231,18 +300,19 @@ private fun isValidExpression(input: String): Boolean {
     return true
 }
 
-enum class Operand(val symbol: String, val precedence: Int) {
+enum class Operator(val symbol: String, val precedence: Int) {
     NONE(" ", 0),
-    ADDITION("+", 1),
-    SUBTRACTION("-", 1),
-    MULTIPLICATION("*", 2),
-    DIVISION("/", 2),
+    PLUS("+", 1),
+    MINUS("-", 1),
+    ASTERISK("*", 2),
+    FORWARD_SLASH("/", 2),
     LEFT_PARENTHESIS("(", 0),
-    RIGHT_PARENTHESIS(")", 0);
+    RIGHT_PARENTHESIS(")", 0),
+    HAT("^",3);
 
 
     companion object {
-        fun getOperand(s: String): Operand {
+        fun getOperand(s: String): Operator {
             if (s.length > 1) {
                 throw NullPointerException()
             }
