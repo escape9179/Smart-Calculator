@@ -6,8 +6,6 @@ import java.util.Scanner
 import java.util.Stack
 import kotlin.system.exitProcess
 
-private const val RIGHT_PARENTHESIS = ")"
-private const val LEFT_PARENTHESIS = "("
 private const val VARIABLE_REGEX = "[A-Za-z]+"
 private val variableMap = mutableMapOf<String, Int>()
 private const val INVALID_ASSIGNMENT_MESSAGE = "Invalid assignment"
@@ -126,7 +124,9 @@ private fun convertToPostfix(input: String): String {
      * The input expression with all numbers replaced by underscores. This
      * makes it easier when converting infix to postfix.
      */
-    val inputWithoutNumbers = input.replace(Regex("\\d+"), "_").toCharArray().map { it.toString() }
+    val inputWithoutNumbersOrSpaces = input.replace(Regex("\\d+"), "_")
+        .filter { it != ' ' }
+        .toCharArray().map { it.toString() }
 
     /**
      * A list containing operands and operators. After the infix to postfix conversion
@@ -140,7 +140,7 @@ private fun convertToPostfix(input: String): String {
     val stack = Stack<String>()
 
 
-    for (char in inputWithoutNumbers) {
+    for (char in inputWithoutNumbersOrSpaces) {
         /* The underscores represent numbers. If an underscore is encountered, append
         * that number to the postfix result and remove it from the number queue. */
         if (char.isUnderscore()) {
@@ -149,52 +149,56 @@ private fun convertToPostfix(input: String): String {
         }
         if (char.isOperator()) {
             /* If the stack is empty or contains a left parenthesis on top,
-                * push the incoming operator on the stack. */
-            if (stack.empty() || stack.peek() == LEFT_PARENTHESIS) {
+            * push the incoming operator on the stack. */
+            if (stack.empty() || stack.peek() == Operand.LEFT_PARENTHESIS.symbol) {
                 stack.push(char)
                 continue
             }
-            /* If the incoming operand has higher precedence than the top of the stack, push it on the stack. */
-            if (Operation.getOperand(char).priority > Operation.getOperand(stack.peek()).priority) {
+            /* If the incoming operator has higher precedence than the top of the stack, push it on the stack. */
+            if (Operand.getOperand(char).precedence > Operand.getOperand(stack.peek()).precedence) {
                 stack.push(char)
                 continue
-                /* If the precedence of the incoming operator is lower than or equal to that of the top of the stack,
-                    * pop the stack and add operators to the result until you see an operator that has smaller
-                    * precedence or a left parenthesis on the top of the stack; then add the incoming operator to the stack. */
             }
-            if (Operation.getOperand(char).priority <= Operation.getOperand(stack.peek()).priority) {
+            /* If the precedence of the incoming operator is lower than or equal to that of the top of the stack,
+            * pop the stack and add operators to the result until you see an operator that has smaller
+            * precedence or a left parenthesis on the top of the stack; then add the incoming operator to the stack. */
+            if (Operand.getOperand(char).precedence <= Operand.getOperand(stack.peek()).precedence) {
                 do {
                     operatorOperandList.add(stack.pop())
-                } while (!stack.empty() && (stack.peek() != LEFT_PARENTHESIS || Operation.getOperand(stack.peek()) >= Operation.getOperand(
-                        char
-                    ))
+                } while (stack.isNotEmpty() && (Operand.getOperand(stack.peek()).precedence > Operand.getOperand(char).precedence || stack.peek() != Operand.LEFT_PARENTHESIS.symbol)
                 )
                 stack.push(char)
                 continue
             }
-            continue
         }
-        /* If the incoming element is a left parenthesis, push it on the stack. */
-        if (char == LEFT_PARENTHESIS) {
-            stack.push(char)
-            continue
-        }
-        /* If the incoming element is a right parenthesis, pop the stack and add operators until you see a left
+        if(char.isParenthesis()) {
+            /* If the incoming element is a left parenthesis, push it on the stack. */
+            if (char == Operand.LEFT_PARENTHESIS.symbol) {
+                stack.push(char)
+                continue
+            }
+            /* If the incoming element is a right parenthesis, pop the stack and add operators until you see a left
             * parenthesis. Discard the pair of parenthesis. */
-        if (char == RIGHT_PARENTHESIS) {
-            do {
-                operatorOperandList.add(stack.pop())
-            } while (stack.peek() != LEFT_PARENTHESIS)
-            /* Discard the left parenthesis */
-            stack.pop()
-            continue
+            if (char == Operand.RIGHT_PARENTHESIS.symbol) {
+                do {
+                    operatorOperandList.add(stack.pop())
+                } while (stack.isNotEmpty() && stack.peek() != Operand.LEFT_PARENTHESIS.symbol)
+                /* Discard the left parenthesis */
+                if (stack.isNotEmpty()) stack.pop()
+                continue
+            }
         }
     }
     /* At the end of the expression, pop the stack and add all operators to the result. */
-    while (!stack.empty()) {
+    while (stack.isNotEmpty()) {
         operatorOperandList.add(stack.pop())
     }
+    println("inputWithoutNumbersOrSpaces = ${inputWithoutNumbersOrSpaces}")
     return operatorOperandList.joinToString(" ")
+}
+
+private fun String.isParenthesis(): Boolean {
+    return Regex("[()]").matches(this)
 }
 
 private fun String.isUnderscore(): Boolean {
@@ -227,43 +231,24 @@ private fun isValidExpression(input: String): Boolean {
     return true
 }
 
-enum class Operation(val operand: Char, val priority: Int) {
-    NONE(' ', 0), ADDITION('+', 1), SUBTRACTION('-', 1), MULTIPLICATION('*', 2), DIVISION('%', 2);
+enum class Operand(val symbol: String, val precedence: Int) {
+    NONE(" ", 0),
+    ADDITION("+", 1),
+    SUBTRACTION("-", 1),
+    MULTIPLICATION("*", 2),
+    DIVISION("/", 2),
+    LEFT_PARENTHESIS("(", 0),
+    RIGHT_PARENTHESIS(")", 0);
+
 
     companion object {
-        fun operators(): List<Char> {
-            return values().map { it.operand }
-        }
-
-        fun getOperand(c: Char): Operation {
-            return values().first { it.operand == c }
-        }
-
-        fun getOperand(s: String): Operation {
+        fun getOperand(s: String): Operand {
             if (s.length > 1) {
                 throw NullPointerException()
             }
-            return getOperand(s[0])
+            return values().first { it.symbol == s }
         }
     }
-}
-
-/**
- * Checks if a string is an even length.
- * @return True if the string is an even length. False otherwise.
- */
-private fun String.isEvenLength(): Boolean {
-    return length % 2 == 0
-}
-
-/**
- * Checks if a string contains one or many of one type of operand.
- * @param token The string being checked
- * @return True if the string contains one or many of one type of operand.
- * False otherwise
- */
-fun isOperatorString(token: String): Boolean {
-    return Operation.operators().any { opChar -> opChar in token && token.all { c -> opChar == c } }
 }
 
 fun processCommand(input: String) {
